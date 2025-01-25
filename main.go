@@ -18,5 +18,8 @@ func main() {
 	app.Put("/user/:id", handlers.UpdateUser)
 	app.Delete("/user/:id", handlers.DeleteUserById)
 
+	app.Post("/job", handlers.AddJob)
+	app.Get("/job", handlers.GetJobs)
+
 	app.Listen(":3000")
 }

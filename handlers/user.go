@@ -7,10 +7,15 @@ import (
 )
 
 func GetUser(c *fiber.Ctx) error {
-	var users []entities.User
+    var users []entities.User
 
-	config.Database.Find(&users)
-	return c.Status(200).JSON(users)
+    if err := database.Preload("Job").Find(&users).Error; err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to retrieve users",
+        })
+    }
+
+    return c.JSON(users)
 }
 
 func GetUserById(c *fiber.Ctx) error {
@@ -29,15 +34,31 @@ func GetUserById(c *fiber.Ctx) error {
 }
 
 func AddUser(c *fiber.Ctx) error {
-	user := new(entities.User)
+    var user entities.User
 
-	if err := c.BodyParser(user); err != nil {
-		return c.Status(503).SendString(err.Error())
-	}
+    if err := c.BodyParser(&user); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": "Failed to parse user data",
+        })
+    }
 
-	config.Database.Create(&user)
-	return c.Status(201).JSON(user)
+    // Validasi JobID
+    var job entities.Job
+    if err := database.First(&job, user.JobID).Error; err != nil {
+        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+            "error": "Job not found",
+        })
+    }
+
+    if err := database.Create(&user).Error; err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to create user",
+        })
+    }
+
+    return c.JSON(user)
 }
+
  
 func UpdateUser(c *fiber.Ctx) error {
 	id := c.Params("id")
